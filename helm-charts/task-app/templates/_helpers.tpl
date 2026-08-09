@@ -32,6 +32,6 @@ Create chart name and version as used by the chart label.
 Create Docker config JSON for imagePullSecret
 */}}
 {{- define "task-app.dockerConfig" -}}
-{{ $auth := printf "%s:%s" .Values.dockerRegistry.username.Values.dockerRegistry.password | b64enc }}
-{{ printf {"auths": {"docker.io":{"auth": "%s"}}} $auth }}
+{{- $auth := printf "%s:%s" .dockerRegistry.username .dockerRegistry.password | b64enc -}}  
+{"auths":{"docker.io":{"auth":"{{ $auth }}"}}}
 {{-end }}
