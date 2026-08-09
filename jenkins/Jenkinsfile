@@ -71,7 +71,7 @@ pipeline {
                         # Encode Docker credentials for imagePullSecret (done at runtime, never in git)
                         AUTH=$(echo -n "${DOCKER_CREDENTIALS_USR}:${DOCKER_CREDENTIALS_PSW}" | base64)
 
-                        DOCKER_SECRET="{\"auths\":{\"docker.io\":{\"auth\":\"${AUTH}\"}}}"
+                        DOCKER_SECRET=$(printf '{"auths":{"docker.io":{"auth":"%s"}}}' "${AUTH}")
                         # Deploy with Helm (namespaces created automatically by templates)
                         helm upgrade --install task-app-release ./helm-charts/task-app \
                           --values helm-charts/task-app/values-dev.yaml \
