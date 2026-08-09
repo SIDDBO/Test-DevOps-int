@@ -10,7 +10,9 @@ namespaces:
 # registry secret passed at deploy time via Jenkins 
 imagePullSecrets:
   -  name: docker-hub-secret
-  
+dockerRegistry:
+  username: ""  # Set via --set dockerRegistry.username=.. at deploy time
+  password: ""  # Set via --set dockerRegistry.password=... at deploy time
 backend:
   name: backend
   replicaCount: 2
