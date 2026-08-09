@@ -68,6 +68,20 @@ pipeline {
                 script {
                     echo "☸️ Deploying with Helm..."
                     sh '''
+                        # Encode Docker credentials for imagePullSecret (done at runtime, never in git)
+                        AUTH=$(echo -n "${DOCKER_CREDENTIALS_USR}:${DOCKER_CREDENTIALS_PSW}" | base64)
+
+                        DOCKER_SECRET=$(cat <<EOF
+{
+  "auths": {
+    "docker.io": {
+      "auth": "$AUTH"
+    }
+  }
+}
+EOF
+)
+
                         # Deploy with Helm (namespaces created automatically by templates)
                         helm upgrade --install task-app-release ./helm-charts/task-app \
                           --values helm-charts/task-app/values-dev.yaml \
@@ -75,6 +89,7 @@ pipeline {
                           --set backend.image.tag=backend-${BUILD_TAG} \
                           --set frontend.image.repository=${DOCKER_REGISTRY}/${DOCKER_REPO} \
                           --set frontend.image.tag=frontend-${BUILD_TAG} \
+                          --set "dockerSecret=${DOCKER_SECRET}" \
                           --wait \
                           --timeout 5m
                     '''
