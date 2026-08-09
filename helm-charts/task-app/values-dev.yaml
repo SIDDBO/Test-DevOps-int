@@ -7,6 +7,10 @@ namespaces:
   backend: backend
   database: database
 
+# registry secret passed at deploy time via Jenkins 
+imagePullSecrets:
+  -  name: docker-hub-secret
+  
 backend:
   name: backend
   replicaCount: 2
