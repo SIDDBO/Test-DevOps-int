@@ -1,0 +1,98 @@
+# Terraform
+.terraform/
+.terraform.lock.hcl
+terraform.tfstate
+terraform.tfstate.*
+terraform.tfvars
+!terraform.tfvars.example
+*.tfstate
+*.tfstate.*
+.DS_Store
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.env
+.env.local
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# Docker
+*.log
+.docker-compose.override.yml
+
+# Kubernetes
+kubeconfig
+.kube/
+*.yaml.bak
+
+# Jenkins
+.jenkins/
+builds/
+workspace/
+
+# Load testing
+load-testing/results*
+
+# Local dev
+.env.local
+.env.development.local
+
+# Backup files
+*.bak
+*.backup
+*.orig
+
+# OS specific
+Thumbs.db
+.DS_Store
+*.swp
+*.swo
+
+# Secrets & Credentials (NEVER COMMIT)
+secrets/
+*.key
+*.pem
+*.p12
+.env
+.env.local
+.env.*.local
+aws-credentials.json
+kubeconfig
+admin.conf
+terraform.tfvars
+!terraform.tfvars.example
+credentials.json
+docker-credentials.json
+~/.aws/credentials
+
+# Temporary
+tmp/
+temp/
+*.tmp

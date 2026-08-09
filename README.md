@@ -1,409 +1,492 @@
-# Terraform - Infrastructure as Code
+# Task Management Application - SRE/DevOps Demo
 
-## Overview
+A dev-ready Kubernetes cluster on AWS with full CI/CD automation, demonstrating enterprise DevOps practices.
 
-Complete AWS infrastructure definition using Terraform for Kubernetes cluster setup on EC2.
+## My DevOps Architecture
 
-## What Gets Created
+This project showcases my understanding of modern DevOps practices:
 
-### Network
-- VPC (Virtual Private Cloud)
-- Subnet with public IP assignment
-- Internet Gateway for outbound access
-- Route tables and associations
-- Security groups with controlled access
-
-### Compute
-- EC2 t3.micro instance (free tier eligible)
-- 30GB EBS volume (free tier max)
-- Elastic IP for static public address
-- CloudWatch monitoring enabled
-
-### Security
-- Security group with SSH, HTTP, HTTPS, and Kubernetes ports
-- IAM roles and policies
-- Private key pair for SSH access
-
-### Kubernetes
-- Bootstrap script via user-data
-- Kubeadm cluster initialization
-- Docker container runtime
-- CNI setup (Flannel)
-- Helm installation
-
-## Prerequisites
-
-```bash
-# Install Terraform
-brew install terraform  # macOS
-# or download from https://www.terraform.io/downloads.html
-
-# Configure AWS credentials
-aws configure
-# Enter: Access Key ID, Secret Access Key, Region, Output format
-
-# Verify
-terraform version
-aws sts get-caller-identity
 ```
+GitHub Repository (Version Control)
+    ↓ Webhook trigger
+Jenkins Pipeline (CI/CD Automation)
+    ├─ Build Docker images with multi-stage builds
+    ├─ Push to Docker Hub with semantic versioning
+    └─ Deploy via Helm with automatic rollback
+        ↓
+AWS Infrastructure (Infrastructure as Code)
+    ├─ Terraform manages all AWS resources
+    ├─ Free tier optimized (EC2 t3.micro)
+    └─ Security groups, IAM, VPC design
+        ↓
+Kubernetes Cluster (Orchestration)
+    ├─ Kubeadm-based cluster on EC2
+    ├─ Helm charts for app packaging
+    ├─ Auto-scaling based on metrics
+    ├─ Health checks and graceful shutdown
+    └─ PostgreSQL with persistent storage
+        ↓
+Observability & Monitoring
+    ├─ Prometheus metrics export
+    ├─ Structured JSON logging
+    ├─ Health endpoints
+    └─ Load testing with Locust
+```
+
+## DevOps Engineering Demonstrations
+
+### 1. Infrastructure as Code (Terraform)
+My approach to managing infrastructure:
+- **Modular design**: Separate concerns (VPC, EC2, security, outputs)
+- **Free tier optimization**: Cost analysis on every resource decision
+- **Reproducibility**: One command to spin up entire environment
+- **Security**: IAM least privilege, security group hardening, secrets management
+- **Scalability**: Parameterized variables for different environments
+
+### 2. Kubernetes Orchestration (Helm)
+How I package and deploy applications:
+- **Helm templating**: Separates configuration from infrastructure (values.yaml)
+- **Environment management**: Dev/prod configurations with template overrides
+- **Namespace segregation**: Frontend, backend, and database in separate namespaces for isolation
+- **Network policies**: Zero-trust networking with pod-to-pod communication rules
+- **Deployment strategy**: Rolling updates with configurable replicas
+- **Health & resilience**: Liveness/readiness probes, Pod Disruption Budgets
+- **Auto-scaling**: HPA with CPU/memory thresholds for handling traffic spikes
+- **Storage**: PostgreSQL StatefulSet with persistent volumes
+- **RBAC & Service Accounts**: Per-namespace service accounts with minimal privileges
+- **Resource quotas**: CPU/memory limits per namespace to prevent resource exhaustion
+
+### 3. CI/CD Pipeline (Jenkins)
+Automation I've implemented:
+- **Pipeline as Code**: Jenkinsfile defines complete workflow
+- **Automated builds**: Docker image creation with semantic versioning
+- **Registry management**: Pushing to Docker Hub with proper tagging
+- **Deployment automation**: Helm upgrade integrated into pipeline
+- **Failure handling**: Automatic rollback when deployment fails
+- **Load testing**: Performance validation as part of pipeline
+
+### 4. Observability & Monitoring
+How I ensure system visibility:
+- **Metrics export**: Prometheus-format metrics for monitoring
+- **Structured logging**: JSON format for easy parsing and aggregation
+- **Health endpoints**: /health and /metrics for K8s probes
+- **Performance testing**: Locust-based load simulation
+- **Auto-scaling validation**: Demonstrates HPA responding to metrics
+
+### 5. Security & Data Handling
+My approach to keeping systems secure:
+- **Secrets management**: K8s Secrets for credentials, not hardcoded
+- **Network security**: Security groups restricting access appropriately
+- **IAM policies**: Least privilege access for AWS resources
+- **Container security**: Multi-stage Docker builds, minimal images
+- **Database security**: PostgreSQL authentication, isolated pods
 
 ## Quick Start
 
-### 1. Initialize
+### Prerequisites
+
+- AWS Account (with free tier eligibility)
+- Terraform >= 1.0
+- Docker & Docker Hub account
+- Git
+- Jenkins (running locally via Docker)
+- kubectl
+- Helm
+
+### 1. Setup AWS Infrastructure
 
 ```bash
-# Download required providers
+cd terraform
+
+# Copy example tfvars and update with your values
+cp terraform.tfvars.example terraform.tfvars
+
+# Initialize Terraform
 terraform init
 
-# Validate configuration
-terraform validate
-```
+# Review changes
+terraform plan
 
-### 2. Plan
+# Apply infrastructure
+terraform apply
 
-```bash
-# Review what will be created
-terraform plan -out=tfplan
-
-# Expected output:
-# Plan: 9 to add, 0 to change, 0 to destroy
-```
-
-### 3. Apply
-
-```bash
-# Create AWS resources
-terraform apply tfplan
-
-# Wait 5-10 minutes for resources to be created
-```
-
-### 4. Outputs
-
-```bash
-# Get connection information
+# Get outputs (EC2 IP, security group, etc.)
 terraform output
-
-# Get specific output
-terraform output instance_public_ip
-terraform output ssh_command
 ```
 
-## Configuration
-
-### variables.tf
-
-All input variables are defined here:
-
-| Variable | Default | Purpose |
-|----------|---------|---------|
-| `aws_region` | us-east-1 | AWS region |
-| `environment` | production | Environment name |
-| `project_name` | task-app | Project identifier |
-| `instance_type` | t3.micro | EC2 instance type |
-| `root_volume_size` | 30 | EBS volume size (GB) |
-| `allowed_ssh_cidr` | 0.0.0.0/0 | SSH access CIDR |
-
-### terraform.tfvars
-
-Create this file from the example:
+### 2. Access the Kubernetes Cluster
 
 ```bash
-cp terraform.tfvars.example terraform.tfvars
-nano terraform.tfvars
+# SSH into EC2 instance
+ssh -i <your-key>.pem ubuntu@<instance-public-ip>
+
+# Copy kubeconfig
+scp -i <your-key>.pem ubuntu@<instance-public-ip>:/home/ubuntu/.kube/config ~/.kube/config
+
+# Verify cluster access
+kubectl cluster-info
+kubectl get nodes
 ```
 
-Example content:
-```hcl
-aws_region = "us-east-1"
-environment = "production"
-project_name = "task-app"
-instance_type = "t3.micro"
-root_volume_size = 30
-
-# Restrict SSH for security
-allowed_ssh_cidr = ["203.0.113.42/32"]  # Your IP
-```
-
-## File Organization
-
-### main.tf
-Core infrastructure:
-- VPC and networking
-- Security groups
-- IAM roles
-- EC2 instance
-- Elastic IP
-
-### variables.tf
-Input variable definitions
-
-### outputs.tf
-Output values after creation:
-- Instance IP
-- Security group ID
-- VPC ID
-- SSH command
-
-### user_data.sh
-Initialization script that runs on EC2:
-- System updates
-- Docker installation
-- Kubernetes installation
-- Cluster initialization
-
-## State Management
-
-Terraform maintains state in:
-```
-terraform.tfstate       # Current state
-terraform.tfstate.backup  # Previous state
-.terraform.lock.hcl     # Provider versions
-```
-
-**⚠️ Never commit tfstate files to Git!**
-
-### Remote State (Optional)
-
-For team environments:
-
-```hcl
-terraform {
-  backend "s3" {
-    bucket = "my-terraform-state"
-    key = "task-app/terraform.tfstate"
-    region = "us-east-1"
-  }
-}
-```
-
-## Usage
-
-### Create Everything
+### 3. Configure Jenkins
 
 ```bash
-terraform apply
+# Configure Docker credentials in Jenkins
+# Add Jenkins connection to K8s cluster (kubeconfig)
+
+# Create pipeline job
+# Webhook: GitHub → Jenkins
+# Pipeline: Jenkinsfile from repo
 ```
 
-### Update Configuration
-
-Edit `variables.tf` or `terraform.tfvars`, then:
+### 4. Deploy Application
 
 ```bash
-terraform plan
-terraform apply
+# Via Jenkins: Push to GitHub triggers automatic deployment
+git push origin main
+
+# Or manually:
+helm upgrade --install task-app-release ./helm-charts/task-app \
+  --values helm-charts/task-app/values-dev.yaml
 ```
 
-### Scale Resources
-
-Change `root_volume_size` in tfvars:
-
-```hcl
-root_volume_size = 50  # Increase from 30GB
-
-terraform plan
-terraform apply
-```
-
-### Destroy Everything
+### 5. Access the Application
 
 ```bash
-terraform destroy
+# Get frontend service address
+kubectl get service task-app-release-frontend -n frontend
 
-# Confirm by typing "yes"
+# Access via LoadBalancer IP or NodePort
+# http://<service-ip>:<port>
 ```
 
-**⚠️ This will delete ALL resources!**
+## Kubernetes Architecture: Three-Namespace Segregation
 
-### Destroy Specific Resource
+The application is deployed across three isolated Kubernetes namespaces for security, resource management, and operational clarity:
+
+### Namespace Design
+
+```
+Frontend Namespace
+├─ Deployment: task-app-release-frontend (2-4 replicas)
+├─ Service: LoadBalancer on port 80
+└─ NetworkPolicy: Allow ingress from any, egress to backend:5000
+
+Backend Namespace
+├─ Deployment: task-app-release-backend (2-5 replicas)
+├─ Service: ClusterIP on port 5000
+├─ ConfigMap: App configuration and secrets
+└─ NetworkPolicy: Allow ingress from frontend, egress to database:5432
+
+Database Namespace
+├─ StatefulSet: PostgreSQL (1 replica)
+├─ Service: ClusterIP on port 5432
+└─ NetworkPolicy: Allow ingress from backend only
+```
+
+### Network Policies (Zero-Trust Security)
+
+- **Frontend → Backend**: Explicit allow via NetworkPolicy to backend:5000
+- **Backend → Database**: Explicit allow via NetworkPolicy to database:5432
+- **Default**: All traffic denied (deny-all policy)
+- **DNS**: Egress to port 53 (TCP/UDP) for all namespaces
+- **Cross-namespace**: Communication uses namespace labels and pod selectors
+
+### Resource Quotas
+
+Each namespace has hard limits to prevent resource exhaustion:
+
+| Namespace | CPU Request | Memory Request |
+|-----------|------------|-----------------|
+| Frontend  | 100m       | 128Mi          |
+| Backend   | 200m       | 256Mi          |
+| Database  | 100m       | 512Mi          |
+
+### Service Accounts & RBAC
+
+Each namespace has a dedicated service account for least-privilege access:
 
 ```bash
-terraform destroy -target=aws_instance.k8s_master
+# View service accounts
+kubectl get serviceaccounts -n frontend
+kubectl get serviceaccounts -n backend
+kubectl get serviceaccounts -n database
 ```
 
-## Accessing the Instance
-
-### SSH Connection
+### Viewing Namespace Status
 
 ```bash
-# Using output command
-ssh -i ~/.aws/keys/task-app-key.pem $(terraform output instance_public_ip | tr -d '"')
+# Check all namespaces
+kubectl get namespaces
 
-# Or manually
-ssh -i ~/.aws/keys/task-app-key.pem ubuntu@<public-ip>
+# View pods by namespace
+kubectl get pods -n frontend
+kubectl get pods -n backend
+kubectl get pods -n database
+
+# Check network policies
+kubectl get networkpolicies -A
+
+# View resource quotas
+kubectl describe resourcequota -n frontend
+kubectl describe resourcequota -n backend
+kubectl describe resourcequota -n database
 ```
 
-### Copy Kubeconfig
+## Directory Structure
+
+```
+SG_demo/
+├── terraform/                    # Infrastructure as Code
+│   ├── main.tf                   # VPC, EC2, Security Groups
+│   ├── variables.tf              # Input variables
+│   ├── outputs.tf                # VPC IP, endpoints
+│   ├── user_data.sh              # K8s cluster bootstrap
+│   └── terraform.tfvars.example  # Configuration template
+│
+├── helm-charts/                  # Kubernetes application package
+│   └── task-app/
+│       ├── Chart.yaml            # Chart metadata
+│       ├── values.yaml           # Default configuration
+│       └── templates/            # Kubernetes manifests
+│
+├── jenkins/                      # CI/CD Pipeline
+│   └── Jenkinsfile               # Pipeline definition
+│
+├── app/                          # Application source code
+│   ├── backend/                  # Flask API
+│   │   ├── main.py
+│   │   ├── requirements.txt
+│   │   └── Dockerfile
+│   └── frontend/                 # Nginx web UI
+│       ├── index.html
+│       ├── nginx.conf
+│       └── Dockerfile
+│
+├── load-testing/                 # Performance testing
+│   ├── locustfile.py
+│   └── requirements.txt
+│
+└── docs/                         # Documentation
+    ├── ARCHITECTURE.md
+    ├── DEPLOYMENT_GUIDE.md
+    ├── SCALING.md
+    └── TROUBLESHOOTING.md
+```
+
+## Development Workflow
+
+### Local Development
 
 ```bash
-scp -i ~/.aws/keys/task-app-key.pem \
-  ubuntu@$(terraform output instance_public_ip | tr -d '"'):/home/ubuntu/.kube/config \
-  ~/.kube/config
+# Build Docker images locally
+docker-compose -f app/docker-compose-local.yml build
+
+# Run locally
+docker-compose -f app/docker-compose-local.yml up
+
+# Access at http://localhost:8080
 ```
+
+### Testing
+
+```bash
+# Run load tests
+python -m pip install locust
+cd load-testing
+locust -f locustfile.py --host=http://localhost:8080
+```
+
+## Deployment
+
+### Manual Deployment
+
+```bash
+# Export kubeconfig
+export KUBECONFIG=~/.kube/config
+
+# Create namespace
+kubectl create namespace dev --dry-run=client -o yaml | kubectl apply -f -
+
+# Install with Helm
+helm install task-app-release ./helm-charts/task-app \
+  --namespace dev \
+  --values helm-charts/task-app/values.yaml
+```
+
+### CI/CD Deployment
+
+1. Push to GitHub
+2. Jenkins webhook triggers
+3. Build Docker images
+4. Push to Docker Hub
+5. Deploy via Helm
+6. Verify deployment
 
 ## Monitoring
 
-### Check Resource Status
+### View Logs
 
 ```bash
-# List all resources
-terraform state list
+# Backend logs
+kubectl logs -f deployment/task-app-release-backend -n dev
 
-# Show resource details
-terraform state show aws_instance.k8s_master
+# Frontend logs
+kubectl logs -f deployment/task-app-release-frontend -n dev
 
-# Check drift (differences from current AWS state)
-terraform refresh
-terraform plan
+# PostgreSQL logs
+kubectl logs -f statefulset/task-app-release-postgresql -n dev
 ```
 
-### View in AWS Console
-
-1. EC2 > Instances - see running instance
-2. VPC > Your VPCs - see network setup
-3. Security Groups - see firewall rules
-4. Elastic IPs - see public IP allocation
-
-## Cost Estimation
+### View Metrics
 
 ```bash
-# Estimate infrastructure cost
-terraform plan -out=tfplan
-# Check output for resource count
+# Pod resource usage
+kubectl top pods -n dev
 
-# AWS Free Tier (12 months):
-# EC2 t3.micro: $0
-# EBS 30GB: $0
-# Data transfer: $0
-# Total: $0/month
+# Node resource usage
+kubectl top nodes
+
+# Deployment status
+kubectl describe deployment task-app-release-backend -n dev
 ```
+
+### Pod Autoscaling Status
+
+```bash
+kubectl get hpa -n dev
+kubectl describe hpa task-app-release-backend-hpa -n dev
+```
+
+## Scaling
+
+### Manual Scaling
+
+```bash
+# Scale backend to 3 replicas
+kubectl scale deployment task-app-release-backend -n dev --replicas=3
+
+# View scaled deployment
+kubectl get pods -n dev
+```
+
+### Auto-scaling
+
+Auto-scaling is configured in `values.yaml`:
+- Min replicas: 2
+- Max replicas: 5
+- Target CPU: 70%
+- Target memory: 80%
+
+Triggers when metrics exceed thresholds.
+
+## Load Testing
+
+```bash
+# Run load test with Locust
+python -m pip install locust
+
+cd load-testing
+locust -f locustfile.py \
+  --host=<frontend-service-ip> \
+  --headless \
+  --users=50 \
+  --spawn-rate=10 \
+  --run-time=60s
+```
+
+## Cost Optimization
+
+This setup is **completely free within AWS free tier**:
+
+- ✅ EC2 t3.micro: 750 hours/month (free)
+- ✅ EBS 30GB: Free tier
+- ✅ Data transfer: <1GB (free)
+- ✅ Elastic IP: Free (while attached)
+- ❌ EKS: NOT used (would cost $0.10/hour)
+
+**Total monthly cost: $0 (within free tier)**
 
 ## Troubleshooting
 
-### Authentication Failed
+### Pod won't start
 
 ```bash
-# Verify AWS credentials
-aws sts get-caller-identity
+# Check pod status
+kubectl describe pod <pod-name> -n dev
 
-# Re-configure
-aws configure
+# View pod logs
+kubectl logs <pod-name> -n dev
+
+# Check events
+kubectl get events -n dev
 ```
 
-### Instance Stuck on "pending"
+### Database connection issues
 
 ```bash
-# Check AWS limits
-aws ec2 describe-account-attributes \
-  --attribute-names supported-platforms
+# Check PostgreSQL pod
+kubectl get pods -n dev | grep postgresql
 
-# Check for errors
-terraform show
+# Connect to PostgreSQL
+kubectl exec -it <postgres-pod> -n dev -- psql -U taskapp -d tasks
 ```
 
-### SSH Connection Refused
+### Helm deployment failed
 
 ```bash
-# Verify security group allows port 22
-aws ec2 describe-security-groups \
-  --group-ids <group-id>
+# Check release status
+helm status task-app-release -n dev
 
-# Verify EC2 instance is running
-aws ec2 describe-instances \
-  --instance-ids <instance-id>
+# Rollback to previous version
+helm rollback task-app-release -n dev
+
+# View release history
+helm history task-app-release -n dev
 ```
 
-### User Data Script Failed
+## What I Learned & What I'd Improve
 
-```bash
-# SSH into instance
-ssh -i key.pem ubuntu@<ip>
+### During This Exercise
 
-# Check logs
-tail -f /var/log/user-data.log
+I demonstrated:
+- ✅ End-to-end DevOps pipeline setup (Terraform → Kubernetes → Jenkins)
+- ✅ Production-grade practices (Helm, HPA, health checks)
+- ✅ Cost optimization (free tier focus)
+- ✅ Observability from the start (metrics, logging, health endpoints)
+- ✅ Security consideration (secrets, IAM, least privilege)
+- ✅ Failure handling (auto-scaling, pod restart, rollback)
 
-# Check cloud-init status
-cloud-init status
-```
+### Next Steps I'd Implement in Production
 
-## Security Best Practices
+- [ ] **TLS/SSL**: Let's Encrypt certificates with cert-manager for HTTPS
+- [ ] **Monitoring Dashboard**: Prometheus + Grafana for real-time visibility
+- [ ] **Log Aggregation**: ELK stack or CloudWatch for centralized logs
+- [ ] **Backup Strategy**: Automated PostgreSQL backups to S3
+- [ ] **Network Policies**: K8s NetworkPolicy for pod-to-pod communication control
+- [ ] **RBAC**: Role-based access control for K8s resources
+- [ ] **CI Testing**: Unit tests, integration tests in Jenkins pipeline
+- [ ] **Security Scanning**: Trivy for container image vulnerability scanning
+- [ ] **Rate Limiting**: Ingress rate limiting to prevent abuse
+- [ ] **Database Migrations**: Automated schema migrations in CD pipeline
+- [ ] **Multi-region**: Active-active setup across AWS regions
+- [ ] **Disaster Recovery**: Cross-region backup and failover procedures
 
-### SSH Access
-```hcl
-# Restrict to your IP instead of 0.0.0.0/0
-allowed_ssh_cidr = ["YOUR_IP/32"]
-```
+## Documentation
 
-### Secrets
-```hcl
-# Store sensitive data in AWS Secrets Manager
-# Reference via:
-data "aws_secretsmanager_secret" "db_password" {
-  name = "rds-password"
-}
-```
+- [ARCHITECTURE.md](ARCHITECTURE.md) - Detailed architecture explanation
+- [DEPLOYMENT_GUIDE.md](DEPLOYMENT_GUIDE.md) - Step-by-step deployment
+- [SCALING.md](docs/SCALING.md) - Scaling strategies
+- [TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) - Common issues and fixes
 
-### Encryption
-```hcl
-# Enable EBS encryption
-resource "aws_ebs_encryption_by_default" "example" {
-  enabled = true
-}
-```
+## Support
 
-## Advanced Topics
+For issues or questions:
+1. Check TROUBLESHOOTING.md
+2. Review Terraform outputs
+3. Check pod logs with kubectl
+4. Review Jenkins pipeline logs
 
-### Multiple Environments
+## License
 
-Create separate tfvars files:
-```bash
-terraform.tfvars.dev
-terraform.tfvars.prod
-terraform.tfvars.staging
-```
-
-Use with:
-```bash
-terraform apply -var-file=terraform.tfvars.prod
-```
-
-### Workspace Separation
-
-```bash
-# Create workspace
-terraform workspace new prod
-
-# List workspaces
-terraform workspace list
-
-# Switch workspace
-terraform workspace select prod
-
-# Apply to specific workspace
-terraform apply
-```
-
-### Auto-Approval
-
-```bash
-# Skip confirmation prompt (use with caution!)
-terraform apply -auto-approve
-```
-
-## Cleanup
-
-```bash
-# Destroy all resources
-terraform destroy
-
-# Remove Terraform files (if starting over)
-rm -rf .terraform/
-rm terraform.tfstate*
-```
-
-## Additional Resources
-
-- [Terraform AWS Provider](https://registry.terraform.io/providers/hashicorp/aws/latest/docs)
-- [Terraform Best Practices](https://terraform.io/docs/cloud/guides/recommended-practices.html)
-- [AWS EC2 Documentation](https://docs.aws.amazon.com/ec2/)
-# Test-DevOps-int
+This is a demonstration project for learning DevOps practices.

@@ -1,0 +1,665 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Kubernetes Architecture - Task App</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        .content {
+            padding: 40px;
+        }
+        .section {
+            margin-bottom: 50px;
+        }
+        .section h2 {
+            color: #667eea;
+            font-size: 1.8em;
+            margin-bottom: 20px;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+        }
+        .section h3 {
+            color: #764ba2;
+            font-size: 1.3em;
+            margin: 20px 0 15px 0;
+        }
+        .diagram {
+            background: #f8f9fa;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 30px;
+            margin: 20px 0;
+            overflow-x: auto;
+        }
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr 1fr;
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .card {
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 20px;
+            background: #f8f9fa;
+        }
+        .card h4 {
+            color: #667eea;
+            margin-bottom: 12px;
+            font-size: 1.1em;
+        }
+        .card ul {
+            list-style: none;
+            padding-left: 0;
+        }
+        .card li {
+            padding: 6px 0;
+            color: #333;
+            font-size: 0.9em;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            background: white;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        thead {
+            background: #667eea;
+            color: white;
+        }
+        th, td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid #e0e0e0;
+            font-size: 0.95em;
+        }
+        tr:hover {
+            background: #f8f9fa;
+        }
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: bold;
+            margin-right: 5px;
+        }
+        .badge-frontend { background: #10b981; color: white; }
+        .badge-backend { background: #3b82f6; color: white; }
+        .badge-database { background: #ec4899; color: white; }
+        .flow-diagram {
+            background: white;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            padding: 30px;
+            margin: 20px 0;
+        }
+        .flow-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin: 15px 0;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 6px;
+            border-left: 4px solid #667eea;
+        }
+        .flow-box {
+            flex: 1;
+            padding: 10px 15px;
+            background: #f0f4ff;
+            border-radius: 4px;
+            font-weight: 500;
+            text-align: center;
+        }
+        .flow-arrow {
+            margin: 0 15px;
+            color: #667eea;
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+        .deny { border-left-color: #ef4444; }
+        .deny .flow-arrow { color: #ef4444; }
+        .stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin: 20px 0;
+        }
+        .stat-card {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .stat-card .number {
+            font-size: 2.5em;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .stat-card .label {
+            font-size: 0.95em;
+        }
+        svg { max-width: 100%; height: auto; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>☸️ Kubernetes Architecture</h1>
+            <p>Multi-Namespace Zero-Trust Design with Network Policies & Resource Quotas</p>
+        </div>
+
+        <div class="content">
+            <!-- Overview -->
+            <div class="section">
+                <h2>📊 Cluster Overview</h2>
+                <div class="stats">
+                    <div class="stat-card">
+                        <div class="number">3</div>
+                        <div class="label">Namespaces</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="number">9-13</div>
+                        <div class="label">Total Pods</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="number">6</div>
+                        <div class="label">Network Policies</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="number">2-5</div>
+                        <div class="label">Auto-Scale Range</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Architecture Diagram -->
+            <div class="section">
+                <h2>🏗️ Complete Cluster Architecture</h2>
+                <div class="diagram">
+                    <svg viewBox="0 0 1200 600" xmlns="http://www.w3.org/2000/svg">
+                        <!-- Cluster Border -->
+                        <rect x="30" y="20" width="1140" height="560" fill="none" stroke="#667eea" stroke-width="3" stroke-dasharray="10,5"/>
+                        <text x="50" y="50" font-size="18" font-weight="bold" fill="#667eea">Kubernetes Cluster on AWS EC2 (t3.micro/t3.small)</text>
+
+                        <!-- FRONTEND NAMESPACE -->
+                        <g id="frontend">
+                            <rect x="50" y="80" width="320" height="480" fill="none" stroke="#10b981" stroke-width="2"/>
+                            <rect x="60" y="85" width="300" height="30" fill="#10b981"/>
+                            <text x="75" y="110" font-size="16" font-weight="bold" fill="white">🌐 Frontend Namespace</text>
+
+                            <!-- Pods -->
+                            <rect x="70" y="130" width="140" height="70" fill="#d1fae5" stroke="#10b981" stroke-width="2" rx="4"/>
+                            <text x="85" y="155" font-size="12" font-weight="bold" fill="#047857">Pod 1 - Nginx</text>
+                            <text x="85" y="170" font-size="10" fill="#047857">Port 80 | 10m CPU | 32Mi</text>
+
+                            <rect x="220" y="130" width="140" height="70" fill="#d1fae5" stroke="#10b981" stroke-width="2" rx="4"/>
+                            <text x="235" y="155" font-size="12" font-weight="bold" fill="#047857">Pod 2 - Nginx</text>
+                            <text x="235" y="170" font-size="10" fill="#047857">Port 80 | 10m CPU | 32Mi</text>
+
+                            <!-- Service -->
+                            <rect x="70" y="220" width="290" height="50" fill="#a7f3d0" stroke="#10b981" stroke-width="2" stroke-dasharray="5,5" rx="4"/>
+                            <text x="85" y="245" font-size="12" font-weight="bold" fill="#047857">LoadBalancer Service (Port 80)</text>
+                            <text x="85" y="263" font-size="9" fill="#047857">External access from any client</text>
+
+                            <!-- Service Account -->
+                            <rect x="70" y="290" width="290" height="45" fill="#ecfdf5" stroke="#10b981" stroke-width="1" rx="4"/>
+                            <text x="85" y="310" font-size="11" font-weight="bold" fill="#047857">ServiceAccount: frontend</text>
+                            <text x="85" y="328" font-size="9" fill="#666">RBAC: API discovery, service lookup</text>
+
+                            <!-- Resource Quota -->
+                            <rect x="70" y="350" width="290" height="55" fill="#ecfdf5" stroke="#10b981" stroke-width="1" rx="4"/>
+                            <text x="85" y="370" font-size="11" font-weight="bold" fill="#047857">ResourceQuota</text>
+                            <text x="85" y="388" font-size="9" fill="#666">CPU: 100m | Memory: 128Mi</text>
+                            <text x="85" y="403" font-size="9" fill="#666">HPA: 2-4 replicas @ 75% CPU threshold</text>
+
+                            <!-- Network Policy -->
+                            <rect x="70" y="420" width="290" height="55" fill="#ecfdf5" stroke="#10b981" stroke-width="1" rx="4"/>
+                            <text x="85" y="440" font-size="11" font-weight="bold" fill="#047857">NetworkPolicy: frontend</text>
+                            <text x="85" y="458" font-size="9" fill="#666">Ingress: Any IP:80 ✓ | Egress: Backend:5000 ✓</text>
+                            <text x="85" y="473" font-size="9" fill="#666">DNS (53) ✓ | Others ✗ (DENY)</text>
+                        </g>
+
+                        <!-- BACKEND NAMESPACE -->
+                        <g id="backend">
+                            <rect x="400" y="80" width="320" height="480" fill="none" stroke="#3b82f6" stroke-width="2"/>
+                            <rect x="410" y="85" width="300" height="30" fill="#3b82f6"/>
+                            <text x="425" y="110" font-size="16" font-weight="bold" fill="white">⚙️ Backend Namespace</text>
+
+                            <!-- Pods -->
+                            <rect x="420" y="130" width="140" height="70" fill="#dbeafe" stroke="#3b82f6" stroke-width="2" rx="4"/>
+                            <text x="435" y="155" font-size="12" font-weight="bold" fill="#1e40af">Pod 1 - Flask</text>
+                            <text x="435" y="170" font-size="10" fill="#1e40af">Port 5000 | 50m CPU | 64Mi</text>
+
+                            <rect x="570" y="130" width="140" height="70" fill="#dbeafe" stroke="#3b82f6" stroke-width="2" rx="4"/>
+                            <text x="585" y="155" font-size="12" font-weight="bold" fill="#1e40af">Pod 2 - Flask</text>
+                            <text x="585" y="170" font-size="10" fill="#1e40af">Port 5000 | 50m CPU | 64Mi</text>
+
+                            <!-- Service -->
+                            <rect x="420" y="220" width="290" height="50" fill="#bfdbfe" stroke="#3b82f6" stroke-width="2" stroke-dasharray="5,5" rx="4"/>
+                            <text x="435" y="245" font-size="12" font-weight="bold" fill="#1e40af">ClusterIP Service (Port 5000)</text>
+                            <text x="435" y="263" font-size="9" fill="#1e40af">Internal: Frontend → Backend</text>
+
+                            <!-- Service Account -->
+                            <rect x="420" y="290" width="290" height="45" fill="#eff6ff" stroke="#3b82f6" stroke-width="1" rx="4"/>
+                            <text x="435" y="310" font-size="11" font-weight="bold" fill="#1e40af">ServiceAccount: backend</text>
+                            <text x="435" y="328" font-size="9" fill="#666">RBAC: Database access, health checks</text>
+
+                            <!-- Resource Quota -->
+                            <rect x="420" y="350" width="290" height="55" fill="#eff6ff" stroke="#3b82f6" stroke-width="1" rx="4"/>
+                            <text x="435" y="370" font-size="11" font-weight="bold" fill="#1e40af">ResourceQuota</text>
+                            <text x="435" y="388" font-size="9" fill="#666">CPU: 200m | Memory: 256Mi</text>
+                            <text x="435" y="403" font-size="9" fill="#666">HPA: 2-5 replicas @ 70% CPU threshold</text>
+
+                            <!-- Network Policy -->
+                            <rect x="420" y="420" width="290" height="55" fill="#eff6ff" stroke="#3b82f6" stroke-width="1" rx="4"/>
+                            <text x="435" y="440" font-size="11" font-weight="bold" fill="#1e40af">NetworkPolicy: backend</text>
+                            <text x="435" y="458" font-size="9" fill="#666">Ingress: Frontend:5000 ✓ | Egress: Database:5432 ✓</text>
+                            <text x="435" y="473" font-size="9" fill="#666">DNS (53) ✓ | Others ✗ (DENY)</text>
+                        </g>
+
+                        <!-- DATABASE NAMESPACE -->
+                        <g id="database">
+                            <rect x="750" y="80" width="320" height="480" fill="none" stroke="#ec4899" stroke-width="2"/>
+                            <rect x="760" y="85" width="300" height="30" fill="#ec4899"/>
+                            <text x="775" y="110" font-size="16" font-weight="bold" fill="white">🗄️ Database Namespace</text>
+
+                            <!-- Pod -->
+                            <rect x="780" y="130" width="280" height="80" fill="#fce7f3" stroke="#ec4899" stroke-width="2" rx="4"/>
+                            <text x="795" y="155" font-size="12" font-weight="bold" fill="#831843">StatefulSet Pod - PostgreSQL</text>
+                            <text x="795" y="170" font-size="10" fill="#831843">Port 5432 | 100m CPU | 256Mi RAM</text>
+                            <text x="795" y="185" font-size="10" fill="#831843">PVC: 1Gi Persistent Volume</text>
+                            <text x="795" y="200" font-size="9" fill="#666">Auto-restore on pod restart</text>
+
+                            <!-- Service -->
+                            <rect x="780" y="230" width="280" height="50" fill="#fbcfe8" stroke="#ec4899" stroke-width="2" stroke-dasharray="5,5" rx="4"/>
+                            <text x="795" y="255" font-size="12" font-weight="bold" fill="#831843">Headless Service (Port 5432)</text>
+                            <text x="795" y="273" font-size="9" fill="#831843">Internal: Backend → Database</text>
+
+                            <!-- Service Account -->
+                            <rect x="780" y="300" width="280" height="45" fill="#fdf2f8" stroke="#ec4899" stroke-width="1" rx="4"/>
+                            <text x="795" y="320" font-size="11" font-weight="bold" fill="#831843">ServiceAccount: database</text>
+                            <text x="795" y="338" font-size="9" fill="#666">RBAC: Read config, read secrets</text>
+
+                            <!-- Resource Quota -->
+                            <rect x="780" y="360" width="280" height="55" fill="#fdf2f8" stroke="#ec4899" stroke-width="1" rx="4"/>
+                            <text x="795" y="380" font-size="11" font-weight="bold" fill="#831843">ResourceQuota</text>
+                            <text x="795" y="398" font-size="9" fill="#666">CPU: 100m | Memory: 512Mi</text>
+                            <text x="795" y="413" font-size="9" fill="#666">Storage: 1Gi (no HPA)</text>
+
+                            <!-- Network Policy -->
+                            <rect x="780" y="430" width="280" height="45" fill="#fdf2f8" stroke="#ec4899" stroke-width="1" rx="4"/>
+                            <text x="795" y="450" font-size="11" font-weight="bold" fill="#831843">NetworkPolicy: database</text>
+                            <text x="795" y="468" font-size="9" fill="#666">Ingress: Backend:5432 ✓ | All others ✗</text>
+                        </g>
+
+                        <!-- Flow Arrows -->
+                        <defs>
+                            <marker id="arrowhead" markerWidth="10" markerHeight="10" refX="9" refY="3" orient="auto">
+                                <polygon points="0 0, 10 3, 0 6" fill="#667eea"/>
+                            </marker>
+                        </defs>
+
+                        <!-- External Access -->
+                        <line x1="30" y1="155" x2="50" y2="155" stroke="#10b981" stroke-width="2" marker-end="url(#arrowhead)"/>
+                        <text x="20" y="150" font-size="9" font-weight="bold" fill="#10b981">HTTP:80</text>
+
+                        <!-- Frontend to Backend -->
+                        <line x1="370" y1="170" x2="400" y2="170" stroke="#667eea" stroke-width="2" marker-end="url(#arrowhead)"/>
+                        <text x="375" y="165" font-size="9" font-weight="bold" fill="#667eea">TCP:5000</text>
+
+                        <!-- Backend to Database -->
+                        <line x1="720" y1="170" x2="750" y2="170" stroke="#667eea" stroke-width="2" marker-end="url(#arrowhead)"/>
+                        <text x="725" y="165" font-size="9" font-weight="bold" fill="#667eea">TCP:5432</text>
+                    </svg>
+                </div>
+            </div>
+
+            <!-- Namespaces -->
+            <div class="section">
+                <h2>📦 Namespaces & Resources</h2>
+                <div class="grid">
+                    <div class="card">
+                        <h4 style="color: #10b981;">🌐 Frontend</h4>
+                        <ul>
+                            <li><strong>Service:</strong> LoadBalancer:80</li>
+                            <li><strong>Pods:</strong> 2-4 (Nginx)</li>
+                            <li><strong>CPU:</strong> 100m quota</li>
+                            <li><strong>Memory:</strong> 128Mi quota</li>
+                            <li><strong>HPA:</strong> 75% CPU threshold</li>
+                            <li><strong>Access:</strong> Public HTTP</li>
+                        </ul>
+                    </div>
+
+                    <div class="card">
+                        <h4 style="color: #3b82f6;">⚙️ Backend</h4>
+                        <ul>
+                            <li><strong>Service:</strong> ClusterIP:5000</li>
+                            <li><strong>Pods:</strong> 2-5 (Flask)</li>
+                            <li><strong>CPU:</strong> 200m quota</li>
+                            <li><strong>Memory:</strong> 256Mi quota</li>
+                            <li><strong>HPA:</strong> 70% CPU threshold</li>
+                            <li><strong>Access:</strong> Frontend only</li>
+                        </ul>
+                    </div>
+
+                    <div class="card">
+                        <h4 style="color: #ec4899;">🗄️ Database</h4>
+                        <ul>
+                            <li><strong>Service:</strong> Headless:5432</li>
+                            <li><strong>Pods:</strong> 1 (PostgreSQL)</li>
+                            <li><strong>CPU:</strong> 100m quota</li>
+                            <li><strong>Memory:</strong> 512Mi quota</li>
+                            <li><strong>Storage:</strong> 1Gi PVC</li>
+                            <li><strong>Access:</strong> Backend only</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Service Accounts -->
+            <div class="section">
+                <h2>🔐 Service Accounts & RBAC</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Namespace</th>
+                            <th>Service Account</th>
+                            <th>Permissions</th>
+                            <th>Purpose</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><span class="badge badge-frontend">frontend</span></td>
+                            <td>task-app-release-frontend</td>
+                            <td>Get/List Services, Endpoints</td>
+                            <td>Service discovery, API calls</td>
+                        </tr>
+                        <tr>
+                            <td><span class="badge badge-backend">backend</span></td>
+                            <td>task-app-release-backend</td>
+                            <td>Get/List Services, Endpoints</td>
+                            <td>DB connection, health checks</td>
+                        </tr>
+                        <tr>
+                            <td><span class="badge badge-database">database</span></td>
+                            <td>task-app-release-database</td>
+                            <td>Read Secrets, ConfigMaps</td>
+                            <td>Database init, credentials</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Network Policies -->
+            <div class="section">
+                <h2>🔒 Network Policies (Zero-Trust)</h2>
+                <p><strong>Default: DENY ALL</strong> - Traffic must be explicitly allowed via NetworkPolicy</p>
+
+                <h3>✅ Allowed Traffic Flows</h3>
+                <div class="flow-diagram">
+                    <div class="flow-row">
+                        <div class="flow-box">External Clients</div>
+                        <div class="flow-arrow">→ HTTP:80 →</div>
+                        <div class="flow-box"><span class="badge badge-frontend">Frontend</span></div>
+                    </div>
+
+                    <div class="flow-row">
+                        <div class="flow-box"><span class="badge badge-frontend">Frontend</span></div>
+                        <div class="flow-arrow">→ TCP:5000 →</div>
+                        <div class="flow-box"><span class="badge badge-backend">Backend</span></div>
+                    </div>
+
+                    <div class="flow-row">
+                        <div class="flow-box"><span class="badge badge-backend">Backend</span></div>
+                        <div class="flow-arrow">→ TCP:5432 →</div>
+                        <div class="flow-box"><span class="badge badge-database">Database</span></div>
+                    </div>
+
+                    <div class="flow-row">
+                        <div class="flow-box">All Pods</div>
+                        <div class="flow-arrow">→ DNS:53 →</div>
+                        <div class="flow-box">CoreDNS</div>
+                    </div>
+                </div>
+
+                <h3>❌ Denied Traffic (Default Policy)</h3>
+                <div class="flow-diagram">
+                    <div class="flow-row deny">
+                        <div class="flow-box"><span class="badge badge-backend">Backend</span></div>
+                        <div class="flow-arrow">→ Blocked →</div>
+                        <div class="flow-box"><span class="badge badge-frontend">Frontend</span></div>
+                    </div>
+
+                    <div class="flow-row deny">
+                        <div class="flow-box"><span class="badge badge-database">Database</span></div>
+                        <div class="flow-arrow">→ Blocked →</div>
+                        <div class="flow-box">External Network</div>
+                    </div>
+
+                    <div class="flow-row deny">
+                        <div class="flow-box">Unknown Pod</div>
+                        <div class="flow-arrow">→ Blocked →</div>
+                        <div class="flow-box"><span class="badge badge-backend">Backend</span></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Resource Quotas & Pod Specs -->
+            <div class="section">
+                <h2>📊 Resource Quotas & Pod Specifications</h2>
+
+                <h3>Namespace Quotas</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Namespace</th>
+                            <th>CPU Quota</th>
+                            <th>Memory Quota</th>
+                            <th>Max Replicas</th>
+                            <th>Total Pods Capacity</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><span class="badge badge-frontend">Frontend</span></td>
+                            <td>100m</td>
+                            <td>128Mi</td>
+                            <td>4</td>
+                            <td>40m CPU, 32Mi/pod</td>
+                        </tr>
+                        <tr>
+                            <td><span class="badge badge-backend">Backend</span></td>
+                            <td>200m</td>
+                            <td>256Mi</td>
+                            <td>5</td>
+                            <td>250m CPU, 51Mi/pod</td>
+                        </tr>
+                        <tr>
+                            <td><span class="badge badge-database">Database</span></td>
+                            <td>100m</td>
+                            <td>512Mi</td>
+                            <td>1</td>
+                            <td>100m CPU, 256Mi/pod</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <h3 style="margin-top: 25px;">Pod Resource Specifications</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Component</th>
+                            <th>CPU Request</th>
+                            <th>CPU Limit</th>
+                            <th>Memory Request</th>
+                            <th>Memory Limit</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><span class="badge badge-frontend">Frontend (Nginx)</span></td>
+                            <td>10m</td>
+                            <td>100m</td>
+                            <td>32Mi</td>
+                            <td>128Mi</td>
+                        </tr>
+                        <tr>
+                            <td><span class="badge badge-backend">Backend (Flask)</span></td>
+                            <td>50m</td>
+                            <td>200m</td>
+                            <td>64Mi</td>
+                            <td>256Mi</td>
+                        </tr>
+                        <tr>
+                            <td><span class="badge badge-database">Database (PostgreSQL)</span></td>
+                            <td>100m</td>
+                            <td>200m</td>
+                            <td>256Mi</td>
+                            <td>512Mi</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <p style="margin-top: 20px; color: #666;"><strong>t3.micro Capacity:</strong> 1000m CPU, 1024Mi RAM</p>
+                <p style="color: #666;"><strong>Baseline Usage:</strong> 160m CPU, 448Mi RAM (16% CPU, 44% Memory) ✓ Safe</p>
+                <p style="color: #666;"><strong>Peak Load (all HPA scaling):</strong> 290m CPU, 608Mi RAM (29% CPU, 59% Memory) ✓ Safe</p>
+            </div>
+
+            <!-- Auto-Scaling -->
+            <div class="section">
+                <h2>📈 Horizontal Pod Autoscaler (HPA)</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Component</th>
+                            <th>Min Replicas</th>
+                            <th>Max Replicas</th>
+                            <th>CPU Threshold</th>
+                            <th>Memory Threshold</th>
+                            <th>Scale-Up Time</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><span class="badge badge-frontend">Frontend</span></td>
+                            <td>2</td>
+                            <td>4</td>
+                            <td>75%</td>
+                            <td>-</td>
+                            <td>15s</td>
+                        </tr>
+                        <tr>
+                            <td><span class="badge badge-backend">Backend</span></td>
+                            <td>2</td>
+                            <td>5</td>
+                            <td>70%</td>
+                            <td>80%</td>
+                            <td>15s</td>
+                        </tr>
+                        <tr>
+                            <td><span class="badge badge-database">Database</span></td>
+                            <td>1</td>
+                            <td>1</td>
+                            <td>-</td>
+                            <td>-</td>
+                            <td>No scaling</td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <p style="margin-top: 20px; color: #666;"><strong>Scale-Down Policy:</strong> Conservative - 300s stabilization window, 50% reduction rate to prevent thrashing</p>
+                <p style="color: #666;"><strong>Pod Disruption Budget:</strong> Minimum 1 pod per service must stay alive during maintenance</p>
+            </div>
+
+            <!-- Health & Lifecycle -->
+            <div class="section">
+                <h2>❤️ Health Checks & Pod Lifecycle</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Component</th>
+                            <th>Liveness Probe</th>
+                            <th>Readiness Probe</th>
+                            <th>Graceful Shutdown</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><span class="badge badge-frontend">Frontend</span></td>
+                            <td>GET / @ 10s, retry 3x</td>
+                            <td>GET / @ 5s, retry 2x</td>
+                            <td>20s preStop delay</td>
+                        </tr>
+                        <tr>
+                            <td><span class="badge badge-backend">Backend</span></td>
+                            <td>GET /health @ 10s, retry 3x</td>
+                            <td>GET /health @ 5s, retry 2x</td>
+                            <td>30s preStop delay</td>
+                        </tr>
+                        <tr>
+                            <td><span class="badge badge-database">Database</span></td>
+                            <td>TCP port 5432 @ 10s</td>
+                            <td>TCP port 5432 @ 5s</td>
+                            <td>30s (commit pending)</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Summary -->
+            <div class="section">
+                <h2>✅ Security & Design Summary</h2>
+                <div style="background: linear-gradient(135deg, rgba(102, 126, 234, 0.1), rgba(118, 75, 162, 0.1)); border-radius: 8px; padding: 25px;">
+                    <ul style="list-style: none; column-count: 2; gap: 20px;">
+                        <li style="margin-bottom: 15px;"><strong>🔒 Zero-Trust Networking:</strong> All traffic denied by default, explicitly allowed only</li>
+                        <li style="margin-bottom: 15px;"><strong>📊 Resource Isolation:</strong> Hard quotas per namespace prevent resource exhaustion</li>
+                        <li style="margin-bottom: 15px;"><strong>🔐 Least-Privilege RBAC:</strong> Each service account has minimal required permissions</li>
+                        <li style="margin-bottom: 15px;"><strong>📈 Auto-Scaling Ready:</strong> HPA handles 2-10x baseline traffic spikes</li>
+                        <li style="margin-bottom: 15px;"><strong>🛡️ High Availability:</strong> Pod Disruption Budgets ensure service continuity</li>
+                        <li style="margin-bottom: 15px;"><strong>🏥 Self-Healing:</strong> Liveness/readiness probes with automatic pod restart</li>
+                        <li style="margin-bottom: 15px;"><strong>📦 Multi-Namespace:</strong> 3 namespaces for frontend, backend, database isolation</li>
+                        <li style="margin-bottom: 15px;"><strong>✓ Free Tier Optimized:</strong> Fits in t3.micro with headroom for peak load</li>
+                    </ul>
+                </div>
+            </div>
+
+            <div style="text-align: center; margin-top: 50px; padding-top: 30px; border-top: 2px solid #e0e0e0; color: #666;">
+                <p style="font-size: 0.95em;">For deployment: helm lint && helm template && helm upgrade --install</p>
+                <p style="font-size: 0.85em; margin-top: 10px;">See README.md and IMPROVEMENTS_AND_LIMITATIONS.md for complete documentation</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

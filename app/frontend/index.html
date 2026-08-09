@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Task Management App</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 10px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            padding: 30px;
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+
+        .status {
+            text-align: center;
+            font-size: 0.9em;
+            color: #666;
+            margin-bottom: 20px;
+            padding: 10px;
+            background: #f0f0f0;
+            border-radius: 5px;
+        }
+
+        .status.healthy {
+            background: #d4edda;
+            color: #155724;
+        }
+
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+
+        .input-section {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        input[type="text"] {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 1em;
+            transition: border-color 0.3s;
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        button {
+            padding: 12px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background: #5568d3;
+        }
+
+        button:active {
+            transform: scale(0.98);
+        }
+
+        .tasks-list {
+            list-style: none;
+        }
+
+        .task-item {
+            background: #f9f9f9;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-left: 4px solid #667eea;
+            transition: transform 0.2s;
+        }
+
+        .task-item:hover {
+            transform: translateX(5px);
+        }
+
+        .task-content {
+            flex: 1;
+        }
+
+        .task-title {
+            font-weight: 500;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .task-date {
+            font-size: 0.85em;
+            color: #999;
+        }
+
+        .task-actions {
+            display: flex;
+            gap: 10px;
+        }
+
+        .btn-small {
+            padding: 8px 12px;
+            font-size: 0.9em;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        .btn-delete {
+            background: #e74c3c;
+            color: white;
+        }
+
+        .btn-delete:hover {
+            background: #c0392b;
+        }
+
+        .btn-complete {
+            background: #27ae60;
+            color: white;
+        }
+
+        .btn-complete:hover {
+            background: #229954;
+        }
+
+        .task-item.completed .task-title {
+            text-decoration: line-through;
+            color: #999;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #999;
+        }
+
+        .empty-state-icon {
+            font-size: 3em;
+            margin-bottom: 10px;
+        }
+
+        .loader {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .error-message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            display: none;
+        }
+
+        .error-message.show {
+            display: block;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>📝 Task Manager</h1>
+        <div id="status" class="status">Checking connection...</div>
+        <div id="error" class="error-message"></div>
+
+        <div class="input-section">
+            <input
+                type="text"
+                id="taskInput"
+                placeholder="Add a new task..."
+                onkeypress="event.key === 'Enter' && addTask()"
+            >
+            <button onclick="addTask()">Add Task</button>
+        </div>
+
+        <ul id="tasksList" class="tasks-list">
+            <div class="empty-state">
+                <div class="empty-state-icon">✨</div>
+                <p>Loading tasks...</p>
+            </div>
+        </ul>
+    </div>
+
+    <script>
+        const API_URL = window.location.origin;
+
+        async function checkHealth() {
+            try {
+                const response = await fetch(`${API_URL}/health`);
+                if (response.ok) {
+                    const data = await response.json();
+                    updateStatus('healthy', `Connected to backend (${data.database})`);
+                } else {
+                    updateStatus('error', 'Backend is not responding');
+                }
+            } catch (error) {
+                updateStatus('error', `Connection failed: ${error.message}`);
+            }
+        }
+
+        async function getTasks() {
+            try {
+                const response = await fetch(`${API_URL}/api/tasks`);
+                if (!response.ok) throw new Error('Failed to fetch tasks');
+
+                const tasks = await response.json();
+                renderTasks(tasks);
+            } catch (error) {
+                showError(`Error loading tasks: ${error.message}`);
+                document.getElementById('tasksList').innerHTML =
+                    '<div class="empty-state"><p>❌ Failed to load tasks</p></div>';
+            }
+        }
+
+        function renderTasks(tasks) {
+            const tasksList = document.getElementById('tasksList');
+
+            if (tasks.length === 0) {
+                tasksList.innerHTML =
+                    '<div class="empty-state"><div class="empty-state-icon">📭</div><p>No tasks yet. Add one!</p></div>';
+                return;
+            }
+
+            tasksList.innerHTML = tasks.map(task => `
+                <li class="task-item ${task.completed ? 'completed' : ''}">
+                    <div class="task-content">
+                        <div class="task-title">${escapeHtml(task.title)}</div>
+                        <div class="task-date">${new Date(task.created_at).toLocaleDateString()}</div>
+                    </div>
+                    <div class="task-actions">
+                        ${!task.completed ? `<button class="btn-small btn-complete" onclick="completeTask(${task.id})">✓</button>` : ''}
+                        <button class="btn-small btn-delete" onclick="deleteTask(${task.id})">🗑</button>
+                    </div>
+                </li>
+            `).join('');
+        }
+
+        async function addTask() {
+            const input = document.getElementById('taskInput');
+            const title = input.value.trim();
+
+            if (!title) {
+                showError('Task title cannot be empty');
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/api/tasks`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title })
+                });
+
+                if (!response.ok) throw new Error('Failed to create task');
+
+                input.value = '';
+                getTasks();
+            } catch (error) {
+                showError(`Error creating task: ${error.message}`);
+            }
+        }
+
+        async function completeTask(id) {
+            try {
+                const response = await fetch(`${API_URL}/api/tasks/${id}`, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ completed: true })
+                });
+
+                if (!response.ok) throw new Error('Failed to update task');
+                getTasks();
+            } catch (error) {
+                showError(`Error updating task: ${error.message}`);
+            }
+        }
+
+        async function deleteTask(id) {
+            if (!confirm('Are you sure?')) return;
+
+            try {
+                const response = await fetch(`${API_URL}/api/tasks/${id}`, {
+                    method: 'DELETE'
+                });
+
+                if (!response.ok) throw new Error('Failed to delete task');
+                getTasks();
+            } catch (error) {
+                showError(`Error deleting task: ${error.message}`);
+            }
+        }
+
+        function updateStatus(status, message) {
+            const statusEl = document.getElementById('status');
+            statusEl.className = `status ${status}`;
+            statusEl.textContent = message;
+        }
+
+        function showError(message) {
+            const errorEl = document.getElementById('error');
+            errorEl.textContent = message;
+            errorEl.classList.add('show');
+            setTimeout(() => errorEl.classList.remove('show'), 3000);
+        }
+
+        function escapeHtml(text) {
+            const map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            return text.replace(/[&<>"']/g, m => map[m]);
+        }
+
+        // Initialize
+        checkHealth();
+        getTasks();
+
+        // Refresh every 5 seconds
+        setInterval(getTasks, 5000);
+    </script>
+</body>
+</html>
