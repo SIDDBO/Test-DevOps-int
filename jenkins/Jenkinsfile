@@ -1,191 +1,190 @@
-pipeline {
-    agent any
+pipeline {
+    agent any
 
-    environment {
-        // Docker Hub configuration
-        DOCKER_REGISTRY = "siddbo85"
-        DOCKER_REPO = "siddbo-private"
-        DOCKER_CREDENTIALS = credentials('docker-credentials')
-        BUILD_TAG = "${BUILD_NUMBER}"
+    environment {
+        // Docker Hub configuration
+        DOCKER_REGISTRY = "siddbo85"
+        DOCKER_REPO = "siddbo-private"
+        DOCKER_CREDENTIALS = credentials('docker-credentials')
+        BUILD_TAG = "${BUILD_NUMBER}"
 
-        // Kubernetes configuration
-        KUBECONFIG = credentials('kubeconfig')
-    }
+        // Kubernetes configuration
+        KUBECONFIG = credentials('kubeconfig')
+    }
 
-    stages {
-        stage('Checkout') {
-            steps {
-                checkout scm
-                script {
-                    env.GIT_COMMIT_MSG = sh(returnStdout: true, script: "git log -1 --pretty=%B").trim()
-                    echo "Building commit: ${GIT_COMMIT_MSG}"
-                }
-            }
-        }
+    stages {
+        stage('Checkout') {
+            steps {
+                checkout scm
+                script {
+                    env.GIT_COMMIT_MSG = sh(returnStdout: true, script: "git log -1 --pretty=%B").trim()
+                    echo "Building commit: ${GIT_COMMIT_MSG}"
+                }
+            }
+        }
 
-        stage('Build Backend Docker Image') {
-            steps {
-                script {
-                    echo "🐳 Building backend Docker image..."
-                    sh '''
- docker build -t ${DOCKER_REGISTRY}/${DOCKER_REPO}:backend-${BUILD_TAG} app/backend/
- docker tag ${DOCKER_REGISTRY}/${DOCKER_REPO}:backend-${BUILD_TAG} ${DOCKER_REGISTRY}/${DOCKER_REPO}:backend-latest
- '''
-                }
-            }
-        }
+        stage('Build Backend Docker Image') {
+            steps {
+                script {
+                    echo "🐳 Building backend Docker image..."
+                    sh '''
+                        docker build -t ${DOCKER_REGISTRY}/${DOCKER_REPO}:backend-${BUILD_TAG} app/backend/
+                        docker tag ${DOCKER_REGISTRY}/${DOCKER_REPO}:backend-${BUILD_TAG} ${DOCKER_REGISTRY}/${DOCKER_REPO}:backend-latest
+                    '''
+                }
+            }
+        }
 
-        stage('Build Frontend Docker Image') {
-            steps {
-                script {
-                    echo "🐳 Building frontend Docker image..."
-                    sh '''
- docker build -t ${DOCKER_REGISTRY}/${DOCKER_REPO}:frontend-${BUILD_TAG} app/frontend/
- docker tag ${DOCKER_REGISTRY}/${DOCKER_REPO}:frontend-${BUILD_TAG} ${DOCKER_REGISTRY}/${DOCKER_REPO}:frontend-latest
- '''
-                }
-            }
-        }
+        stage('Build Frontend Docker Image') {
+            steps {
+                script {
+                    echo "🐳 Building frontend Docker image..."
+                    sh '''
+                        docker build -t ${DOCKER_REGISTRY}/${DOCKER_REPO}:frontend-${BUILD_TAG} app/frontend/
+                        docker tag ${DOCKER_REGISTRY}/${DOCKER_REPO}:frontend-${BUILD_TAG} ${DOCKER_REGISTRY}/${DOCKER_REPO}:frontend-latest
+                    '''
+                }
+            }
+        }
 
-        stage('Push to Docker Hub') {
-            steps {
-                script {
-                    echo "📤 Pushing images to Docker Hub..."
-                    sh '''
- echo "${DOCKER_CREDENTIALS_PSW}" | docker login -u "${DOCKER_CREDENTIALS_USR}" --password-stdin
- docker push ${DOCKER_REGISTRY}/${DOCKER_REPO}:backend-${BUILD_TAG}
- docker push ${DOCKER_REGISTRY}/${DOCKER_REPO}:backend-latest
- docker push ${DOCKER_REGISTRY}/${DOCKER_REPO}:frontend-${BUILD_TAG}
- docker push ${DOCKER_REGISTRY}/${DOCKER_REPO}:frontend-latest
- docker logout
- '''
-                }
-            }
-        }
+        stage('Push to Docker Hub') {
+            steps {
+                script {
+                    echo "📤 Pushing images to Docker Hub..."
+                    sh '''
+                        echo "${DOCKER_CREDENTIALS_PSW}" | docker login -u "${DOCKER_CREDENTIALS_USR}" --password-stdin
+                        docker push ${DOCKER_REGISTRY}/${DOCKER_REPO}:backend-${BUILD_TAG}
+                        docker push ${DOCKER_REGISTRY}/${DOCKER_REPO}:backend-latest
+                        docker push ${DOCKER_REGISTRY}/${DOCKER_REPO}:frontend-${BUILD_TAG}
+                        docker push ${DOCKER_REGISTRY}/${DOCKER_REPO}:frontend-latest
+                        docker logout
+                    '''
+                }
+            }
+        }
 
-        stage('Deploy with Helm') {
-            steps {
-                script {
-                    echo "☸️ Deploying with Helm..."
-                    sh '''
- # Deploy with Helm (namespaces created automatically by templates)
- helm upgrade --install task-app-release ./helm-charts/task-app \
- --values helm-charts/task-app/values-dev.yaml \
- --set backend.image.repository=${DOCKER_REGISTRY}/${DOCKER_REPO} \
- --set backend.image.tag=backend-${BUILD_TAG} \
- --set frontend.image.repository=${DOCKER_REGISTRY}/${DOCKER_REPO} \
- --set frontend.image.tag=frontend-${BUILD_TAG} \
- --wait \
- --timeout 5m
- '''
-                }
-            }
-        }
+        stage('Deploy with Helm') {
+            steps {
+                script {
+                    echo "☸️ Deploying with Helm..."
+                    sh '''
+                        # Deploy with Helm (namespaces created automatically by templates)
+                        helm upgrade --install task-app-release ./helm-charts/task-app \
+                          --values helm-charts/task-app/values-dev.yaml \
+                          --set backend.image.repository=${DOCKER_REGISTRY}/${DOCKER_REPO} \
+                          --set backend.image.tag=backend-${BUILD_TAG} \
+                          --set frontend.image.repository=${DOCKER_REGISTRY}/${DOCKER_REPO} \
+                          --set frontend.image.tag=frontend-${BUILD_TAG} \
+                          --wait \
+                          --timeout 5m
+                    '''
+                }
+            }
+        }
 
-        stage('Verify Deployment') {
-            steps {
-                script {
-                    echo "✅ Verifying deployment..."
-                    sh '''
- # Wait for backend and frontend deployments
- kubectl rollout status deployment/task-app-release-backend -n backend --timeout=5m
- kubectl rollout status deployment/task-app-release-frontend -n frontend --timeout=5m
+        stage('Verify Deployment') {
+            steps {
+                script {
+                    echo "✅ Verifying deployment..."
+                    sh '''
+                        # Wait for backend and frontend deployments
+                        kubectl rollout status deployment/task-app-release-backend -n backend --timeout=5m
+                        kubectl rollout status deployment/task-app-release-frontend -n frontend --timeout=5m
 
- echo "\n📊 Frontend Pods:"
- kubectl get pods -n frontend -l app=task-app-frontend
+                        echo "\n📊 Frontend Pods:"
+                        kubectl get pods -n frontend -l app=task-app-frontend
 
- echo "\n📊 Backend Pods:"
- kubectl get pods -n backend -l app=task-app-backend
+                        echo "\n📊 Backend Pods:"
+                        kubectl get pods -n backend -l app=task-app-backend
 
- echo "\n📊 Database Pods:"
- kubectl get pods -n database -l app=task-app-database || echo "Database pod info not available"
+                        echo "\n📊 Database Pods:"
+                        kubectl get pods -n database -l app=task-app-database || echo "Database pod info not available"
 
- echo "\n📋 Frontend Service:"
- kubectl get service -n frontend
+                        echo "\n📋 Frontend Service:"
+                        kubectl get service -n frontend
 
- echo "\n📋 Backend Service:"
- kubectl get service -n backend
+                        echo "\n📋 Backend Service:"
+                        kubectl get service -n backend
 
- echo "\n🔐 NetworkPolicies:"
- kubectl get networkpolicies -n frontend
- kubectl get networkpolicies -n backend
- kubectl get networkpolicies -n database
- '''
-                }
-            }
-        }
+                        echo "\n🔐 NetworkPolicies:"
+                        kubectl get networkpolicies -n frontend
+                        kubectl get networkpolicies -n backend
+                        kubectl get networkpolicies -n database
+                    '''
+                }
+            }
+        }
 
-        stage('Run Load Tests') {
-            steps {
-                script {
-                    echo "⚡ Running load tests..."
-                    sh '''
- # Get frontend service IP or hostname from frontend namespace
- FRONTEND_IP=$(kubectl get service task-app-release-frontend -n frontend -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
- if [ -z "$FRONTEND_IP" ]; then
- FRONTEND_IP=$(kubectl get service task-app-release-frontend -n frontend -o jsonpath='{.spec.clusterIP}')
- fi
+        stage('Run Load Tests') {
+            steps {
+                script {
+                    echo "⚡ Running load tests..."
+                    sh '''
+                        # Get frontend service IP or hostname from frontend namespace
+                        FRONTEND_IP=$(kubectl get service task-app-release-frontend -n frontend -o jsonpath='{.status.loadBalancer.ingress[0].ip}')
+                        if [ -z "$FRONTEND_IP" ]; then
+                            FRONTEND_IP=$(kubectl get service task-app-release-frontend -n frontend -o jsonpath='{.spec.clusterIP}')
+                        fi
 
- echo "Frontend IP: $FRONTEND_IP"
+                        echo "Frontend IP: $FRONTEND_IP"
 
- # Run load tests
- python -m pip install locust requests --quiet
- cd load-testing
- locust -f locustfile.py \
- --host=http://${FRONTEND_IP} \
- --headless \
- --users=50 \
- --spawn-rate=10 \
- --run-time=60s \
- --csv=results
- '''
-                }
-            }
-        }
+                        # Run load tests
+                        python -m pip install locust requests --quiet
+                        cd load-testing
+                        locust -f locustfile.py \
+                          --host=http://${FRONTEND_IP} \
+                          --headless \
+                          --users=50 \
+                          --spawn-rate=10 \
+                          --run-time=60s \
+                          --csv=results
+                    '''
+                }
+            }
+        }
 
-        stage('Collect Metrics') {
-            steps {
-                script {
-                    echo "📊 Collecting metrics..."
-                    sh '''
- echo "\n=== Frontend Namespace Pods ==="
- kubectl top pods -n frontend --no-headers || true
+        stage('Collect Metrics') {
+            steps {
+                script {
+                    echo "📊 Collecting metrics..."
+                    sh '''
+                        echo "\n=== Frontend Namespace Pods ==="
+                        kubectl top pods -n frontend --no-headers || true
 
- echo "\n=== Backend Namespace Pods ==="
- kubectl top pods -n backend --no-headers || true
+                        echo "\n=== Backend Namespace Pods ==="
+                        kubectl top pods -n backend --no-headers || true
 
- echo "\n=== Database Namespace Pods ==="
- kubectl top pods -n database --no-headers || true
+                        echo "\n=== Database Namespace Pods ==="
+                        kubectl top pods -n database --no-headers || true
 
- echo "\n=== Node Resource Usage ==="
- kubectl top nodes --no-headers || true
+                        echo "\n=== Node Resource Usage ==="
+                        kubectl top nodes --no-headers || true
 
- echo "\n=== Horizontal Pod Autoscaler Status ==="
- kubectl get hpa -A
- '''
-                }
-            }
-        }
-    }
+                        echo "\n=== Horizontal Pod Autoscaler Status ==="
+                        kubectl get hpa -A
+                    '''
+                }
+            }
+        }
+    }
 
-    post {
-        success {
-            echo "✅ Pipeline completed successfully!"
-            echo "Application is live at: kubectl get service -n dev"
-        }
-        failure {
-            script {
-                echo "❌ Pipeline failed! Rolling back..."
-                sh '''
- helm rollback task-app-release || true
- echo "Rollback completed"
- '''
-            }
-        }
-        always {
-            // Cleanup
-            cleanWs()
-        }
-    }
+    post {
+        success {
+            echo "✅ Pipeline completed successfully!"
+            echo "Application is live at: kubectl get service -n dev"
+        }
+        failure {
+            script {
+                echo "❌ Pipeline failed! Rolling back..."
+                sh '''
+                    helm rollback task-app-release || true
+                    echo "Rollback completed"
+                '''
+            }
+        }
+        always {
+            // Cleanup
+            cleanWs()
+        }
+    }
 }
- 
