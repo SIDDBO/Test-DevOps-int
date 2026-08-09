@@ -27,3 +27,11 @@ Create chart name and version as used by the chart label.
 {{- define "task-app.chart" -}}
 {{- printf "%s-%s" .Chart.Name .Chart.Version | replace "+" "_" | trunc 63 | trimSuffix "-" }}
 {{- end }}
+
+{{/*
+Create Docker config JSON for imagePullSecret
+*/}}
+{{- define "task-app.dockerConfig" -}}
+{{ $auth := printf "%s:%s" .Values.dockerRegistry.username.Values.dockerRegistry.password | b64enc }}
+{{ printf {"auths": {"docker.io":{"auth": "%s"}}} $auth }}
+{{-end }}
