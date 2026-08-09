@@ -7,12 +7,15 @@ namespaces:
   backend: backend
   database: database
 
-# registry secret passed at deploy time via Jenkins 
+# Docker registry credentials for pulling private images
+# Note: username and password are passed at deploy time via Jenkins, never stored in git
 imagePullSecrets:
-  -  name: docker-hub-secret
+  - name: docker-hub-secret
+
 dockerRegistry:
-  username: ""  # Set via --set dockerRegistry.username=.. at deploy time
+  username: ""  # Set via --set dockerRegistry.username=... at deploy time
   password: ""  # Set via --set dockerRegistry.password=... at deploy time
+
 backend:
   name: backend
   replicaCount: 2
