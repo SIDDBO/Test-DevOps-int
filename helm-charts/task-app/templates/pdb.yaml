@@ -1,0 +1,29 @@
+{{- if .Values.podDisruptionBudget.enabled }}
+---
+# Backend PDB
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "task-app.fullname" . }}-backend-pdb
+  namespace: {{ .Values.namespaces.backend }}
+spec:
+  minAvailable: {{ .Values.podDisruptionBudget.minAvailable }}
+  selector:
+    matchLabels:
+      app: {{ include "task-app.name" . }}-backend
+      release: {{ .Release.Name }}
+
+---
+# Frontend PDB
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "task-app.fullname" . }}-frontend-pdb
+  namespace: {{ .Values.namespaces.frontend }}
+spec:
+  minAvailable: {{ .Values.podDisruptionBudget.minAvailable }}
+  selector:
+    matchLabels:
+      app: {{ include "task-app.name" . }}-frontend
+      release: {{ .Release.Name }}
+{{- end }}

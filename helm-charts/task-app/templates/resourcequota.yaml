@@ -1,0 +1,56 @@
+---
+# Frontend Namespace ResourceQuota
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: {{ include "task-app.fullname" . }}-frontend-quota
+  namespace: {{ .Values.namespaces.frontend }}
+spec:
+  hard:
+    requests.cpu: {{ .Values.resourceQuotas.frontend.cpu }}
+    requests.memory: {{ .Values.resourceQuotas.frontend.memory }}
+    limits.cpu: {{ .Values.resourceQuotas.frontend.cpu }}
+    limits.memory: {{ .Values.resourceQuotas.frontend.memory }}
+  scopeSelector:
+    matchExpressions:
+    - operator: In
+      scopeName: PriorityClass
+      values: ["default"]
+
+---
+# Backend Namespace ResourceQuota
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: {{ include "task-app.fullname" . }}-backend-quota
+  namespace: {{ .Values.namespaces.backend }}
+spec:
+  hard:
+    requests.cpu: {{ .Values.resourceQuotas.backend.cpu }}
+    requests.memory: {{ .Values.resourceQuotas.backend.memory }}
+    limits.cpu: {{ .Values.resourceQuotas.backend.cpu }}
+    limits.memory: {{ .Values.resourceQuotas.backend.memory }}
+  scopeSelector:
+    matchExpressions:
+    - operator: In
+      scopeName: PriorityClass
+      values: ["default"]
+
+---
+# Database Namespace ResourceQuota
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: {{ include "task-app.fullname" . }}-database-quota
+  namespace: {{ .Values.namespaces.database }}
+spec:
+  hard:
+    requests.cpu: {{ .Values.resourceQuotas.database.cpu }}
+    requests.memory: {{ .Values.resourceQuotas.database.memory }}
+    limits.cpu: {{ .Values.resourceQuotas.database.cpu }}
+    limits.memory: {{ .Values.resourceQuotas.database.memory }}
+  scopeSelector:
+    matchExpressions:
+    - operator: In
+      scopeName: PriorityClass
+      values: ["default"]
