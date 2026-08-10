@@ -79,9 +79,8 @@ pipeline {
                             --set frontend.image.repository="${DOCKER_REGISTRY}/${DOCKER_REPO}" \
                             --set frontend.image.tag="frontend-${BUILD_TAG}" \
                             --set dockerRegistry.username="${DOCKER_CREDENTIALS_USR}" \
-                            --set dockerRegistry.password="${DOCKER_CREDENTIALS_PSW}" \
-                            --wait \
-                            --timeout 5m
+                            --set dockerRegistry.password="${DOCKER_CREDENTIALS_PSW}"
+
                     '''
                 }
             }
