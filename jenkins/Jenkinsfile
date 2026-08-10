@@ -133,7 +133,7 @@ pipeline {
                         echo "Frontend IP: $FRONTEND_IP"
 
                         # Run load tests
-                        python3 -m pip install locust requests --quiet
+                        python3 -m pip install --break-system-packages locust requests --quiet
                         cd load-testing
                         locust -f locustfile.py \
                           --host=http://${FRONTEND_IP} \
