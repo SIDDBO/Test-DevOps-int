@@ -8,6 +8,7 @@ data:
   DB_TIMEOUT: {{ .Values.config.DB_TIMEOUT | quote }}
 
 ---
+# Backend database credentials secret
 apiVersion: v1
 kind: Secret
 metadata:
@@ -18,3 +19,17 @@ stringData:
   database: {{ .Values.postgresql.auth.database | quote }}
   username: {{ .Values.postgresql.auth.username | quote }}
   password: {{ .Values.postgresql.auth.password | quote }}
+
+---
+# Database credentials secret
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ include "task-app.fullname" . }}-db
+  namespace: {{ .Values.namespaces.database }}
+type: Opaque
+stringData:
+  database: {{ .Values.postgresql.auth.database | quote }}
+  username: {{ .Values.postgresql.auth.username | quote }}
+  password: {{ .Values.postgresql.auth.password | quote }}
+
