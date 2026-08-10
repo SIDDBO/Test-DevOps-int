@@ -1,6 +1,6 @@
 {{- if .Values.postgresql.enabled }}
 apiVersion: apps/v1
-kind: StatefulSet
+kind: Deployment
 metadata:
   name: {{ include "task-app.fullname" . }}-postgresql
   namespace: {{ .Values.namespaces.database }}
@@ -9,7 +9,6 @@ metadata:
     chart: {{ include "task-app.chart" . }}
     release: {{ .Release.Name }}
 spec:
-  serviceName: {{ include "task-app.fullname" . }}-postgresql
   replicas: 1
   selector:
     matchLabels:
@@ -88,12 +87,7 @@ spec:
 
       terminationGracePeriodSeconds: 30
 
-  volumeClaimTemplates:
-  - metadata:
-      name: postgres-storage
-    spec:
-      accessModes: [ "ReadWriteOnce" ]
-      resources:
-        requests:
-          storage: {{ .Values.postgresql.primary.persistence.size | quote }}
+      volumes:
+      - name: postgres-storage
+        emptyDir: {}
 {{- end }}
